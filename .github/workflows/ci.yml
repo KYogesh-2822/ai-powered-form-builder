@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -18,7 +18,7 @@ jobs:
           extensions: bcmath, gd, intl, pcntl, pdo_sqlite, posix, zip
           coverage: none
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
