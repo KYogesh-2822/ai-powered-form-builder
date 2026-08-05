@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Observers\FormObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'version',
     'published_at',
 ])]
+#[ObservedBy([FormObserver::class])]
 class Form extends Model
 {
     use SoftDeletes;
@@ -60,6 +63,12 @@ class Form extends Model
     public function automations(): HasMany
     {
         return $this->hasMany(FormAutomation::class);
+    }
+
+    /** @return HasMany<FormVersion, $this> */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(FormVersion::class);
     }
 
     public function getRouteKeyName(): string

@@ -25,6 +25,7 @@ import {
     GripVertical,
     Hash,
     Heading2,
+    History,
     Link2,
     Mail,
     MessageSquareText,
@@ -39,6 +40,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FormAutomationPanel from '@/components/form-automation-panel';
 import type { FormAutomation } from '@/components/form-automation-panel';
+import FormVersionHistory from '@/components/form-version-history';
+import type { FormVersionSummary } from '@/components/form-version-history';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -61,6 +64,7 @@ type Props = {
     form: FormData;
     fieldTypes: FieldType[];
     latestAutomation: FormAutomation | null;
+    versions: FormVersionSummary[];
 };
 
 const palette: { type: FieldType; label: string; icon: typeof Type }[] = [
@@ -204,7 +208,11 @@ function SortableField({
     );
 }
 
-export default function FormBuilder({ form, latestAutomation }: Props) {
+export default function FormBuilder({
+    form,
+    latestAutomation,
+    versions,
+}: Props) {
     const [title, setTitle] = useState(form.title);
     const [description, setDescription] = useState(form.description ?? '');
     const [schema, setSchema] = useState<FormSchema>(form.schema);
@@ -221,6 +229,7 @@ export default function FormBuilder({ form, latestAutomation }: Props) {
         latestAutomation !== null &&
             ['queued', 'running'].includes(latestAutomation.status),
     );
+    const [showHistory, setShowHistory] = useState(false);
     const appliedAutomation = useRef<string | null>(null);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -411,6 +420,12 @@ export default function FormBuilder({ form, latestAutomation }: Props) {
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <Button
+                            variant={showHistory ? 'default' : 'outline'}
+                            onClick={() => setShowHistory((open) => !open)}
+                        >
+                            <History /> History
+                        </Button>
+                        <Button
                             variant={showAutomation ? 'default' : 'outline'}
                             onClick={() => setShowAutomation((open) => !open)}
                         >
@@ -449,6 +464,14 @@ export default function FormBuilder({ form, latestAutomation }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                {showHistory && (
+                    <FormVersionHistory
+                        formUuid={form.uuid}
+                        currentVersion={form.version}
+                        versions={versions}
+                    />
+                )}
 
                 {showAutomation && (
                     <FormAutomationPanel
@@ -703,6 +726,13 @@ export default function FormBuilder({ form, latestAutomation }: Props) {
 
                         <FieldInspector
                             field={selectedField}
+                            availableFields={schema.sections
+                                .flatMap((section) => section.fields)
+                                .filter(
+                                    (field) =>
+                                        field.type !== 'heading' &&
+                                        field.id !== selectedField?.id,
+                                )}
                             onChange={(patch) =>
                                 selected &&
                                 updateField(
@@ -721,9 +751,11 @@ export default function FormBuilder({ form, latestAutomation }: Props) {
 
 function FieldInspector({
     field,
+    availableFields,
     onChange,
 }: {
     field: FormField | null;
+    availableFields: FormField[];
     onChange: (patch: Partial<FormField>) => void;
 }) {
     if (!field) {
@@ -738,6 +770,9 @@ function FieldInspector({
     }
 
     const choice = ['dropdown', 'radio'].includes(field.type);
+    const conditionSource = availableFields.find(
+        (candidate) => candidate.key === field.condition?.field,
+    );
 
     return (
         <aside className="hidden overflow-y-auto border-l bg-background p-5 xl:block">
@@ -790,6 +825,124 @@ function FieldInspector({
                         />
                     </label>
                 )}
+                <div className="space-y-3 rounded-lg border p-3">
+                    <Setting label="Conditional display">
+                        <select
+                            value={field.condition?.field ?? ''}
+                            onChange={(event) =>
+                                onChange({
+                                    condition: event.target.value
+                                        ? {
+                                              field: event.target.value,
+                                              operator: 'equals',
+                                              value: '',
+                                          }
+                                        : null,
+                                })
+                            }
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        >
+                            <option value="">Always show this field</option>
+                            {availableFields.map((candidate) => (
+                                <option
+                                    key={candidate.id}
+                                    value={candidate.key}
+                                >
+                                    When: {candidate.label}
+                                </option>
+                            ))}
+                        </select>
+                    </Setting>
+                    {field.condition && (
+                        <>
+                            <Setting label="Operator">
+                                <select
+                                    value={field.condition.operator}
+                                    onChange={(event) =>
+                                        onChange({
+                                            condition: {
+                                                ...field.condition!,
+                                                operator: event.target.value as
+                                                    | 'equals'
+                                                    | 'not_equals'
+                                                    | 'contains',
+                                            },
+                                        })
+                                    }
+                                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                >
+                                    <option value="equals">Equals</option>
+                                    <option value="not_equals">
+                                        Does not equal
+                                    </option>
+                                    <option value="contains">Contains</option>
+                                </select>
+                            </Setting>
+                            <Setting label="Expected value">
+                                {conditionSource &&
+                                ['dropdown', 'radio'].includes(
+                                    conditionSource.type,
+                                ) ? (
+                                    <select
+                                        value={field.condition.value}
+                                        onChange={(event) =>
+                                            onChange({
+                                                condition: {
+                                                    ...field.condition!,
+                                                    value: event.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Select a value</option>
+                                        {conditionSource.options.map(
+                                            (option) => (
+                                                <option
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </option>
+                                            ),
+                                        )}
+                                    </select>
+                                ) : conditionSource?.type === 'checkbox' ? (
+                                    <select
+                                        value={field.condition.value}
+                                        onChange={(event) =>
+                                            onChange({
+                                                condition: {
+                                                    ...field.condition!,
+                                                    value: event.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    >
+                                        <option value="true">Checked</option>
+                                        <option value="false">
+                                            Not checked
+                                        </option>
+                                    </select>
+                                ) : (
+                                    <Input
+                                        value={field.condition.value}
+                                        onChange={(event) =>
+                                            onChange({
+                                                condition: {
+                                                    ...field.condition!,
+                                                    value: event.target.value,
+                                                },
+                                            })
+                                        }
+                                        placeholder="Value to compare"
+                                    />
+                                )}
+                            </Setting>
+                        </>
+                    )}
+                </div>
                 {choice && (
                     <Setting label="Options (one per line)">
                         <textarea

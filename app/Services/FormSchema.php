@@ -217,19 +217,51 @@ class FormSchema
             $this->invalid('A form may contain at most 200 fields.');
         }
 
+        foreach ($normalized['sections'] as &$section) {
+            foreach ($section['fields'] as &$field) {
+                $condition = $field['condition'];
+                if (! is_array($condition)) {
+                    $field['condition'] = null;
+
+                    continue;
+                }
+
+                $source = trim((string) ($condition['field'] ?? ''));
+                $operator = (string) ($condition['operator'] ?? 'equals');
+                if (
+                    ! isset($keys[$source])
+                    || $source === $field['key']
+                    || ! in_array($operator, ['equals', 'not_equals', 'contains'], true)
+                ) {
+                    $field['condition'] = null;
+
+                    continue;
+                }
+
+                $field['condition'] = [
+                    'field' => $source,
+                    'operator' => $operator,
+                    'value' => Str::limit((string) ($condition['value'] ?? ''), 255, ''),
+                ];
+            }
+            unset($field);
+        }
+        unset($section);
+
         return $normalized;
     }
 
     /**
      * @param  SchemaArray  $schema
+     * @param  array<string, mixed>  $answers
      * @return array<string, list<mixed>>
      */
-    public function rules(array $schema): array
+    public function rules(array $schema, array $answers = []): array
     {
         $rules = [];
 
         foreach ($this->fields($schema) as $field) {
-            if ($field['type'] === 'heading') {
+            if ($field['type'] === 'heading' || ! $this->isVisible($field, $answers)) {
                 continue;
             }
 
@@ -276,6 +308,28 @@ class FormSchema
         }
 
         return $rules;
+    }
+
+    /**
+     * @param  FieldArray  $field
+     * @param  array<string, mixed>  $answers
+     */
+    public function isVisible(array $field, array $answers): bool
+    {
+        $condition = $field['condition'] ?? null;
+        if (! is_array($condition)) {
+            return true;
+        }
+
+        $source = $answers[(string) ($condition['field'] ?? '')] ?? null;
+        $actual = is_scalar($source) ? (string) $source : '';
+        $expected = (string) ($condition['value'] ?? '');
+
+        return match ($condition['operator'] ?? 'equals') {
+            'not_equals' => $actual !== $expected,
+            'contains' => str_contains($actual, $expected),
+            default => $actual === $expected,
+        };
     }
 
     /**

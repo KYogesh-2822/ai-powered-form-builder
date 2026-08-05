@@ -38,10 +38,12 @@ export default function PublicForm({ form, submitted }: Props) {
         answers: Record<string, Answer>;
         website: string;
         started_at: string;
+        submission_token: string;
     }>({
         answers: defaults,
         website: '',
         started_at: new Date().toISOString(),
+        submission_token: crypto.randomUUID(),
     });
     const section = form.schema.sections[step];
     const lastStep = step === form.schema.sections.length - 1;

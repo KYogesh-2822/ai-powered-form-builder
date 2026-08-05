@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Form;
 use App\Models\User;
 use App\Services\FormSchema;
+use App\Services\FormVersionManager;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ class DatabaseSeeder extends Seeder
         $schema['sections'][0]['fields'][0]['required'] = true;
         $schema['sections'][0]['fields'][1]['required'] = true;
 
-        Form::query()->updateOrCreate(['slug' => 'event-registration-demo'], [
+        $form = Form::query()->updateOrCreate(['slug' => 'event-registration-demo'], [
             'user_id' => $user->id,
             'uuid' => (string) Str::uuid(),
             'title' => 'Event registration',
@@ -40,5 +41,9 @@ class DatabaseSeeder extends Seeder
             'settings' => [],
             'published_at' => now(),
         ]);
+
+        if (! $form->versions()->exists()) {
+            app(FormVersionManager::class)->recordInitial($form, $user->id);
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Form;
 use App\Services\FormSchema;
+use App\Services\FormVersionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,7 +33,7 @@ class FormController extends Controller
         ]);
     }
 
-    public function store(Request $request, FormSchema $schemas): RedirectResponse
+    public function store(Request $request, FormSchema $schemas, FormVersionManager $versions): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
@@ -48,6 +49,7 @@ class FormController extends Controller
             'schema' => $schemas->blank(),
             'settings' => [],
         ]);
+        $versions->recordInitial($form, $request->user()->id);
 
         return to_route('forms.edit', $form)
             ->with('toast', ['type' => 'success', 'message' => 'Form created.']);
@@ -81,11 +83,20 @@ class FormController extends Controller
                 'completed_at',
                 'applied_at',
             ]),
+            'versions' => $form->versions()
+                ->with('user:id,name')
+                ->latest('version')
+                ->limit(15)
+                ->get(['id', 'form_id', 'user_id', 'version', 'source', 'summary', 'created_at']),
         ]);
     }
 
-    public function update(Request $request, Form $form, FormSchema $schemas): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        Form $form,
+        FormSchema $schemas,
+        FormVersionManager $versions,
+    ): RedirectResponse {
         Gate::authorize('update', $form);
 
         $data = $request->validate([
@@ -94,11 +105,17 @@ class FormController extends Controller
             'schema' => ['required', 'array'],
         ]);
 
-        $form->update([
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
-            'schema' => $schemas->validateAndNormalize($data['schema']),
-        ]);
+        $versions->update(
+            $form,
+            [
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'schema' => $schemas->validateAndNormalize($data['schema']),
+            ],
+            $request->user()->id,
+            'manual',
+            'Builder changes saved',
+        );
 
         return back()->with('toast', ['type' => 'success', 'message' => 'All changes saved.']);
     }

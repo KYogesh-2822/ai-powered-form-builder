@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\FormAutomation;
+use App\Services\FormVersionManager;
 use App\Services\OpenAiFormGenerator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -22,7 +23,7 @@ class GenerateFormWithAi implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(OpenAiFormGenerator $generator): void
+    public function handle(OpenAiFormGenerator $generator, FormVersionManager $versions): void
     {
         $automation = FormAutomation::query()->with('form')->findOrFail($this->automationId);
         $automation->update([
@@ -38,8 +39,14 @@ class GenerateFormWithAi implements ShouldQueue
 
         $result = $generator->generate($prompt, $existing, $safetyIdentifier);
 
-        DB::transaction(function () use ($automation, $result): void {
-            $automation->form->update(['schema' => $result['schema']]);
+        DB::transaction(function () use ($automation, $result, $versions, $mode): void {
+            $versions->update(
+                $automation->form,
+                ['schema' => $result['schema']],
+                $automation->user_id,
+                'ai',
+                $mode === 'edit' ? 'AI-assisted form edit' : 'AI-generated form',
+            );
             $automation->update([
                 'status' => 'completed',
                 'result_schema' => $result['schema'],

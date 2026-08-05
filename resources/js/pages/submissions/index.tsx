@@ -21,7 +21,7 @@ type Props = {
 
 function display(value: unknown): string {
     if (value === null || value === undefined || value === '') {
-        return '';
+        return '-';
     }
 
     if (typeof value === 'object') {

@@ -6,6 +6,7 @@ use App\Http\Controllers\FormAutomationController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormImportController;
 use App\Http\Controllers\FormSubmissionController;
+use App\Http\Controllers\FormVersionController;
 use App\Http\Controllers\PublicFormController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('forms.automations.latest');
     Route::post('form-automations/{automation}/apply', [FormAutomationController::class, 'apply'])
         ->name('form-automations.apply');
+    Route::post('forms/{form}/versions/{version}/restore', [FormVersionController::class, 'restore'])
+        ->name('forms.versions.restore');
     Route::get('forms/{form}/submissions', [FormSubmissionController::class, 'index'])->name('forms.submissions.index');
     Route::get('forms/{form}/submissions/export', [FormSubmissionController::class, 'export'])->name('forms.submissions.export');
 });

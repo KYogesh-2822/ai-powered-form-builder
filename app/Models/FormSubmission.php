@@ -11,12 +11,14 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $form_id
  * @property string $reference
+ * @property string|null $submission_token
  * @property array<string, mixed> $answers
  * @property Carbon|null $submitted_at
  */
 #[Fillable([
     'form_id',
     'reference',
+    'submission_token',
     'answers',
     'searchable_text',
     'status',
