@@ -1,0 +1,119 @@
+name: formforge
+
+services:
+  app:
+    build:
+      context: .
+      target: app
+    env_file: .env
+    environment:
+      APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-formforge}
+      DB_USERNAME: ${DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+    command: ["sh", "-c", "php artisan migrate --force && php-fpm"]
+    volumes:
+      - private-data:/var/www/html/storage/app/private
+      - public-data:/var/www/html/storage/app/public
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "8080:80"
+    volumes:
+      - public-data:/var/www/html/storage/app/public:ro
+    depends_on:
+      app:
+        condition: service_healthy
+
+  queue:
+    build:
+      context: .
+      target: app
+    env_file: .env
+    environment:
+      APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE:-formforge}
+      DB_USERNAME: ${DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+    command: ["php", "artisan", "horizon"]
+    volumes:
+      - private-data:/var/www/html/storage/app/private
+      - public-data:/var/www/html/storage/app/public
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    build:
+      context: .
+      target: app
+    env_file: .env
+    environment:
+      APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE:-formforge}
+      DB_USERNAME: ${DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-formforge}
+      MYSQL_USER: ${DB_USERNAME:-formforge}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-formforge}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-formforge-root}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-formforge-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mysql-data:
+  redis-data:
+  private-data:
+  public-data:

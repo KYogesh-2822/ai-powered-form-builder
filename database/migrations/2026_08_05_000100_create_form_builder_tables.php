@@ -37,7 +37,7 @@ return new class extends Migration
             $table->char('ip_hash', 64)->nullable();
             $table->string('user_agent', 500)->nullable();
             $table->timestamp('started_at')->nullable();
-            $table->timestamp('submitted_at');
+            $table->dateTime('submitted_at');
             $table->timestamps();
 
             $table->index(['form_id', 'submitted_at']);

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('title', 160);
             $table->text('description')->nullable();
             $table->json('schema');
-            $table->timestamp('created_at');
+            $table->dateTime('created_at');
 
             $table->unique(['form_id', 'version']);
             $table->index(['form_id', 'created_at']);
