@@ -58,12 +58,16 @@ class FormSchema
     {
         $type = in_array($type, self::FIELD_TYPES, true) ? $type : 'text';
         $label ??= Str::headline($type);
+        $key = trim((string) preg_replace('/[^a-z0-9]+/', '_', Str::lower(Str::ascii($label))), '_');
+        if ($key === '' || preg_match('/^[a-z]/', $key) !== 1) {
+            $key = 'field_'.$key;
+        }
 
         return [
             'id' => (string) Str::uuid(),
             'type' => $type,
             'label' => $label,
-            'key' => Str::snake(Str::ascii($label)).'_'.Str::lower(Str::random(4)),
+            'key' => Str::limit($key, 55, '').'_'.Str::lower(Str::random(4)),
             'placeholder' => '',
             'helpText' => '',
             'defaultValue' => $type === 'checkbox' ? false : '',

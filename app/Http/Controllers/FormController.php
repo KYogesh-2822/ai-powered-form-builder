@@ -56,6 +56,7 @@ class FormController extends Controller
     public function edit(Form $form): Response
     {
         Gate::authorize('update', $form);
+        $automation = $form->automations()->latest()->first();
 
         return Inertia::render('forms/builder', [
             'form' => [
@@ -64,6 +65,22 @@ class FormController extends Controller
                 'public_url' => route('public.forms.show', $form->slug),
             ],
             'fieldTypes' => FormSchema::FIELD_TYPES,
+            'latestAutomation' => $automation?->only([
+                'uuid',
+                'type',
+                'status',
+                'input',
+                'result_schema',
+                'provider',
+                'model',
+                'input_tokens',
+                'output_tokens',
+                'latency_ms',
+                'error',
+                'created_at',
+                'completed_at',
+                'applied_at',
+            ]),
         ]);
     }
 

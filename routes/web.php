@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\AiFormController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FormAutomationController;
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\FormImportController;
 use App\Http\Controllers\FormSubmissionController;
 use App\Http\Controllers\PublicFormController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +21,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('forms', FormController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
     Route::patch('forms/{form}/publish', [FormController::class, 'publish'])->name('forms.publish');
     Route::patch('forms/{form}/slug', [FormController::class, 'updateSlug'])->name('forms.slug.update');
+    Route::post('forms/{form}/ai', [AiFormController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('forms.ai.store');
+    Route::post('forms/{form}/imports', [FormImportController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('forms.imports.store');
+    Route::get('forms/{form}/automations/latest', [FormAutomationController::class, 'latest'])
+        ->name('forms.automations.latest');
+    Route::post('form-automations/{automation}/apply', [FormAutomationController::class, 'apply'])
+        ->name('form-automations.apply');
     Route::get('forms/{form}/submissions', [FormSubmissionController::class, 'index'])->name('forms.submissions.index');
     Route::get('forms/{form}/submissions/export', [FormSubmissionController::class, 'export'])->name('forms.submissions.export');
 });

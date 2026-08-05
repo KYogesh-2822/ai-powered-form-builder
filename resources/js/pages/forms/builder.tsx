@@ -31,11 +31,14 @@ import {
     Phone,
     Plus,
     Save,
+    Sparkles,
     Star,
     Trash2,
     Type,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import FormAutomationPanel from '@/components/form-automation-panel';
+import type { FormAutomation } from '@/components/form-automation-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -54,7 +57,11 @@ type FormData = {
     submissions_count: number;
 };
 
-type Props = { form: FormData; fieldTypes: FieldType[] };
+type Props = {
+    form: FormData;
+    fieldTypes: FieldType[];
+    latestAutomation: FormAutomation | null;
+};
 
 const palette: { type: FieldType; label: string; icon: typeof Type }[] = [
     { type: 'text', label: 'Short text', icon: Type },
@@ -197,7 +204,7 @@ function SortableField({
     );
 }
 
-export default function FormBuilder({ form }: Props) {
+export default function FormBuilder({ form, latestAutomation }: Props) {
     const [title, setTitle] = useState(form.title);
     const [description, setDescription] = useState(form.description ?? '');
     const [schema, setSchema] = useState<FormSchema>(form.schema);
@@ -210,9 +217,29 @@ export default function FormBuilder({ form }: Props) {
         JSON.stringify(form.schema, null, 2),
     );
     const [jsonError, setJsonError] = useState('');
+    const [showAutomation, setShowAutomation] = useState(
+        latestAutomation !== null &&
+            ['queued', 'running'].includes(latestAutomation.status),
+    );
+    const appliedAutomation = useRef<string | null>(null);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     );
+
+    useEffect(() => {
+        if (
+            !latestAutomation?.applied_at ||
+            !latestAutomation.result_schema ||
+            appliedAutomation.current === latestAutomation.uuid
+        ) {
+            return;
+        }
+
+        setSchema(latestAutomation.result_schema);
+        setRawJson(JSON.stringify(latestAutomation.result_schema, null, 2));
+        setSelected(null);
+        appliedAutomation.current = latestAutomation.uuid;
+    }, [latestAutomation]);
 
     const selectedField = useMemo(() => {
         if (!selected) {
@@ -383,6 +410,12 @@ export default function FormBuilder({ form }: Props) {
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant={showAutomation ? 'default' : 'outline'}
+                            onClick={() => setShowAutomation((open) => !open)}
+                        >
+                            <Sparkles /> AI & import
+                        </Button>
                         <Button asChild variant="outline">
                             <Link href={`/forms/${form.uuid}/submissions`}>
                                 <MessageSquareText /> Responses
@@ -416,6 +449,14 @@ export default function FormBuilder({ form }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                {showAutomation && (
+                    <FormAutomationPanel
+                        key={`${latestAutomation?.uuid ?? 'none'}-${latestAutomation?.status ?? 'idle'}-${latestAutomation?.applied_at ?? 'pending'}`}
+                        formUuid={form.uuid}
+                        automation={latestAutomation}
+                    />
+                )}
 
                 <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
                     <Button

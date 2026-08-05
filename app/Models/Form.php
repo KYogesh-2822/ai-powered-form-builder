@@ -56,6 +56,12 @@ class Form extends Model
         return $this->hasMany(FormSubmission::class);
     }
 
+    /** @return HasMany<FormAutomation, $this> */
+    public function automations(): HasMany
+    {
+        return $this->hasMany(FormAutomation::class);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'uuid';
