@@ -1,6 +1,6 @@
 # FormForge - AI-Powered Form Builder
 
-> **Live demo:** Pending deployment credentials and Git origin from the project owner. No remote has been configured or used.
+> **Live demo:** Pending deployment hosting credentials. Source is published at [KYogesh-2822/ai-powered-form-builder](https://github.com/KYogesh-2822/ai-powered-form-builder).
 >
 > **Local demo:** `demo@formforge.test` / `password`
 
@@ -27,7 +27,9 @@ docker compose up --build -d
 docker compose exec app php artisan db:seed
 ```
 
-Open `http://localhost:8080` and sign in with the demo credentials above. The compose file starts the web application, MySQL 8.4, Redis, Horizon worker, and scheduler. Its fallback `APP_KEY` is for local Docker use only; set a unique key in every deployed environment.
+Open `http://localhost:8080` and sign in with the demo credentials above. The compose file starts the web application, MySQL 8.4, Redis, Horizon worker, and scheduler. Docker uses the `DOCKER_DB_*` values independently from the native `DB_*` connection, so XAMPP can keep its own MySQL credentials. Its fallback `APP_KEY` is for local Docker use only; set a unique key in every deployed environment.
+
+On a network that performs HTTPS inspection, export its public root certificate in PEM format and set `DOCKER_BUILD_CA_FILE` to that file. The build imports a valid supplied certificate without disabling TLS verification; the included example file is ignored on ordinary networks.
 
 Useful commands:
 
@@ -60,6 +62,8 @@ For development, run `composer run dev`. Alternatively run the Laravel server, V
 |---|---|
 | `APP_URL`, `APP_KEY` | Canonical URL and encryption key |
 | `DB_*` | MySQL 8 connection; defaults target a local `formforge` database |
+| `DOCKER_DB_*` | MySQL database and credentials used only by Docker Compose |
+| `DOCKER_BUILD_CA_FILE` | Optional PEM root certificate for HTTPS-inspecting networks |
 | `REDIS_*` | Cache, session, queue, and Horizon Redis connection |
 | `OPENAI_API_KEY` | Server-only OpenAI credential; never commit it |
 | `OPENAI_BASE_URL` | Defaults to `https://api.openai.com/v1` |

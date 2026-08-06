@@ -5,6 +5,8 @@ services:
     build:
       context: .
       target: app
+      secrets:
+        - build_ca
     env_file: .env
     environment:
       APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
@@ -12,9 +14,10 @@ services:
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-formforge}
-      DB_USERNAME: ${DB_USERNAME:-formforge}
-      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      DB_DATABASE: ${DOCKER_DB_DATABASE:-formforge}
+      DB_USERNAME: ${DOCKER_DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-formforge}
+      REDIS_CLIENT: predis
       REDIS_HOST: redis
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
@@ -33,6 +36,8 @@ services:
     build:
       context: .
       target: web
+      secrets:
+        - build_ca
     ports:
       - "8080:80"
     volumes:
@@ -45,14 +50,17 @@ services:
     build:
       context: .
       target: app
+      secrets:
+        - build_ca
     env_file: .env
     environment:
       APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
       DB_CONNECTION: mysql
       DB_HOST: mysql
-      DB_DATABASE: ${DB_DATABASE:-formforge}
-      DB_USERNAME: ${DB_USERNAME:-formforge}
-      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      DB_DATABASE: ${DOCKER_DB_DATABASE:-formforge}
+      DB_USERNAME: ${DOCKER_DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-formforge}
+      REDIS_CLIENT: predis
       REDIS_HOST: redis
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
@@ -68,14 +76,17 @@ services:
     build:
       context: .
       target: app
+      secrets:
+        - build_ca
     env_file: .env
     environment:
       APP_KEY: ${APP_KEY:-base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=}
       DB_CONNECTION: mysql
       DB_HOST: mysql
-      DB_DATABASE: ${DB_DATABASE:-formforge}
-      DB_USERNAME: ${DB_USERNAME:-formforge}
-      DB_PASSWORD: ${DB_PASSWORD:-formforge}
+      DB_DATABASE: ${DOCKER_DB_DATABASE:-formforge}
+      DB_USERNAME: ${DOCKER_DB_USERNAME:-formforge}
+      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-formforge}
+      REDIS_CLIENT: predis
       REDIS_HOST: redis
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
@@ -87,16 +98,16 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-formforge}
-      MYSQL_USER: ${DB_USERNAME:-formforge}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-formforge}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-formforge-root}
+      MYSQL_DATABASE: ${DOCKER_DB_DATABASE:-formforge}
+      MYSQL_USER: ${DOCKER_DB_USERNAME:-formforge}
+      MYSQL_PASSWORD: ${DOCKER_DB_PASSWORD:-formforge}
+      MYSQL_ROOT_PASSWORD: ${DOCKER_DB_ROOT_PASSWORD:-formforge-root}
     ports:
       - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-formforge-root}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DOCKER_DB_ROOT_PASSWORD:-formforge-root}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -117,3 +128,7 @@ volumes:
   redis-data:
   private-data:
   public-data:
+
+secrets:
+  build_ca:
+    file: ${DOCKER_BUILD_CA_FILE:-docker/certs/custom-ca.example.pem}
