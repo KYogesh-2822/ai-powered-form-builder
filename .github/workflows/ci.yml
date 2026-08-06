@@ -59,7 +59,22 @@ jobs:
         run: vendor/bin/phpstan analyse --memory-limit=512M
 
       - name: PHPUnit
-        run: vendor/bin/phpunit --colors=always
+        shell: bash
+        run: |
+          set +e
+          output="$(vendor/bin/phpunit --colors=never 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+
+          if [ "$status" -ne 0 ]; then
+            message="$(printf '%s\n' "$output" | tail -n 100)"
+            message="${message//'%'/'%25'}"
+            message="${message//$'\r'/'%0D'}"
+            message="${message//$'\n'/'%0A'}"
+            echo "::error title=PHPUnit failure::$message"
+            exit "$status"
+          fi
 
       - name: Frontend quality checks
         run: |
