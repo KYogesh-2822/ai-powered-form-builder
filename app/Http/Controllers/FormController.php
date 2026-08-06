@@ -51,8 +51,9 @@ class FormController extends Controller
         ]);
         $versions->recordInitial($form, $request->user()->id);
 
-        return to_route('forms.edit', $form)
-            ->with('toast', ['type' => 'success', 'message' => 'Form created.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Form created.']);
+
+        return to_route('forms.edit', $form);
     }
 
     public function edit(Form $form): Response
@@ -65,6 +66,7 @@ class FormController extends Controller
                 ...$form->only(['uuid', 'title', 'slug', 'description', 'status', 'schema', 'version', 'published_at', 'updated_at']),
                 'submissions_count' => $form->submissions()->count(),
                 'public_url' => route('public.forms.show', $form->slug),
+                'preview_url' => route('forms.preview', $form),
             ],
             'fieldTypes' => FormSchema::FIELD_TYPES,
             'latestAutomation' => $automation?->only([
@@ -91,6 +93,38 @@ class FormController extends Controller
         ]);
     }
 
+    public function preparePreview(Request $request, Form $form, FormSchema $schemas): RedirectResponse
+    {
+        Gate::authorize('update', $form);
+
+        $request->session()->put($this->previewSessionKey($form), $this->builderAttributes($request, $schemas));
+
+        return back();
+    }
+
+    public function preview(Request $request, Form $form, FormSchema $schemas): Response
+    {
+        Gate::authorize('update', $form);
+
+        $preview = $request->session()->get($this->previewSessionKey($form));
+        if (! is_array($preview)) {
+            $preview = [
+                'title' => $form->title,
+                'description' => $form->description,
+                'schema' => $schemas->validateAndNormalize($form->schema),
+            ];
+        }
+
+        return Inertia::render('public/forms/show', [
+            'form' => [
+                ...$preview,
+                'slug' => $form->slug,
+            ],
+            'submitted' => false,
+            'preview' => true,
+        ]);
+    }
+
     public function update(
         Request $request,
         Form $form,
@@ -99,43 +133,46 @@ class FormController extends Controller
     ): RedirectResponse {
         Gate::authorize('update', $form);
 
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:160'],
-            'description' => ['nullable', 'string', 'max:2000'],
-            'schema' => ['required', 'array'],
-        ]);
-
         $versions->update(
             $form,
-            [
-                'title' => $data['title'],
-                'description' => $data['description'] ?? null,
-                'schema' => $schemas->validateAndNormalize($data['schema']),
-            ],
+            $this->builderAttributes($request, $schemas),
             $request->user()->id,
             'manual',
             'Builder changes saved',
         );
 
-        return back()->with('toast', ['type' => 'success', 'message' => 'All changes saved.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'All changes saved.']);
+
+        return back();
     }
 
-    public function publish(Form $form, FormSchema $schemas): RedirectResponse
-    {
+    public function publish(
+        Request $request,
+        Form $form,
+        FormSchema $schemas,
+        FormVersionManager $versions,
+    ): RedirectResponse {
         Gate::authorize('update', $form);
-        $schema = $schemas->validateAndNormalize($form->schema);
         $publishing = $form->status !== 'published';
 
-        $form->update([
-            'schema' => $schema,
-            'status' => $publishing ? 'published' : 'draft',
-            'published_at' => $publishing ? now() : null,
-        ]);
+        $versions->update(
+            $form,
+            [
+                ...$this->builderAttributes($request, $schemas),
+                'status' => $publishing ? 'published' : 'draft',
+                'published_at' => $publishing ? now() : null,
+            ],
+            $request->user()->id,
+            'publish',
+            $publishing ? 'Published form' : 'Moved form back to draft',
+        );
 
-        return back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => $publishing ? 'Form published.' : 'Form moved back to draft.',
         ]);
+
+        return back();
     }
 
     public function updateSlug(Request $request, Form $form): RedirectResponse
@@ -152,7 +189,9 @@ class FormController extends Controller
         ]);
         $form->update($data);
 
-        return back()->with('toast', ['type' => 'success', 'message' => 'Public URL updated.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Public URL updated.']);
+
+        return back();
     }
 
     public function destroy(Form $form): RedirectResponse
@@ -160,8 +199,30 @@ class FormController extends Controller
         Gate::authorize('delete', $form);
         $form->delete();
 
-        return to_route('forms.index')
-            ->with('toast', ['type' => 'success', 'message' => 'Form deleted.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Form deleted.']);
+
+        return to_route('forms.index');
+    }
+
+    /** @return array{title: string, description: ?string, schema: array<string, mixed>} */
+    private function builderAttributes(Request $request, FormSchema $schemas): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'schema' => ['required', 'array'],
+        ]);
+
+        return [
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'schema' => $schemas->validateAndNormalize($data['schema']),
+        ];
+    }
+
+    private function previewSessionKey(Form $form): string
+    {
+        return 'form_preview.'.$form->uuid;
     }
 
     private function uniqueSlug(string $title): string

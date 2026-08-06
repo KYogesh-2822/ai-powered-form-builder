@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class FormImportController extends Controller
 {
@@ -47,9 +48,11 @@ class FormImportController extends Controller
 
         ImportFormDocument::dispatch($automation->id);
 
-        return back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Document queued for import. You can preview it before applying changes.',
         ]);
+
+        return back();
     }
 }

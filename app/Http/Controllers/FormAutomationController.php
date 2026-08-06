@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class FormAutomationController extends Controller
 {
@@ -59,6 +60,8 @@ class FormAutomationController extends Controller
             'applied_at' => now(),
         ]);
 
-        return back()->with('toast', ['type' => 'success', 'message' => 'Generated schema applied to the form.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Generated schema applied to the form.']);
+
+        return back();
     }
 }

@@ -20,6 +20,8 @@ Route::post('f/{slug}', [PublicFormController::class, 'submit'])
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::resource('forms', FormController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
+    Route::post('forms/{form}/preview', [FormController::class, 'preparePreview'])->name('forms.preview.prepare');
+    Route::get('forms/{form}/preview', [FormController::class, 'preview'])->name('forms.preview');
     Route::patch('forms/{form}/publish', [FormController::class, 'publish'])->name('forms.publish');
     Route::patch('forms/{form}/slug', [FormController::class, 'updateSlug'])->name('forms.slug.update');
     Route::post('forms/{form}/ai', [AiFormController::class, 'store'])

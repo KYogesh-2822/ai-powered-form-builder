@@ -27,6 +27,7 @@ import {
     Heading2,
     History,
     Link2,
+    LoaderCircle,
     Mail,
     MessageSquareText,
     Phone,
@@ -38,6 +39,7 @@ import {
     Type,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import FormAutomationPanel from '@/components/form-automation-panel';
 import type { FormAutomation } from '@/components/form-automation-panel';
 import FormVersionHistory from '@/components/form-version-history';
@@ -57,6 +59,7 @@ type FormData = {
     schema: FormSchema;
     version: number;
     public_url: string;
+    preview_url: string;
     submissions_count: number;
 };
 
@@ -230,6 +233,9 @@ export default function FormBuilder({
             ['queued', 'running'].includes(latestAutomation.status),
     );
     const [showHistory, setShowHistory] = useState(false);
+    const [activeAction, setActiveAction] = useState<
+        'save' | 'publish' | 'preview' | null
+    >(null);
     const appliedAutomation = useRef<string | null>(null);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -365,12 +371,70 @@ export default function FormBuilder({
     }
 
     function save() {
+        setActiveAction('save');
         router.put(
             `/forms/${form.uuid}`,
             { title, description, schema },
             {
                 preserveScroll: true,
                 onSuccess: () => setRawJson(JSON.stringify(schema, null, 2)),
+                onError: (errors) =>
+                    toast.error(
+                        Object.values(errors)[0] ??
+                            'The form could not be saved.',
+                    ),
+                onFinish: () => setActiveAction(null),
+            },
+        );
+    }
+
+    function publish() {
+        setActiveAction('publish');
+        router.patch(
+            `/forms/${form.uuid}/publish`,
+            { title, description, schema },
+            {
+                preserveScroll: true,
+                onSuccess: () => setRawJson(JSON.stringify(schema, null, 2)),
+                onError: (errors) =>
+                    toast.error(
+                        Object.values(errors)[0] ??
+                            'The form could not be published.',
+                    ),
+                onFinish: () => setActiveAction(null),
+            },
+        );
+    }
+
+    function preview() {
+        const previewWindow = window.open('', '_blank');
+
+        if (!previewWindow) {
+            toast.error('Allow pop-ups to open the form preview.');
+
+            return;
+        }
+
+        previewWindow.document.title = 'Preparing preview...';
+        previewWindow.document.body.innerHTML =
+            '<p style="font: 16px sans-serif; padding: 24px">Preparing preview...</p>';
+        setActiveAction('preview');
+
+        router.post(
+            `/forms/${form.uuid}/preview`,
+            { title, description, schema },
+            {
+                preserveScroll: true,
+                onSuccess: () =>
+                    previewWindow.location.assign(form.preview_url),
+                onError: (errors) => {
+                    previewWindow.close();
+                    toast.error(
+                        Object.values(errors)[0] ??
+                            'The preview could not be prepared.',
+                    );
+                },
+                onFinish: () => setActiveAction(null),
             },
         );
     }
@@ -437,30 +501,42 @@ export default function FormBuilder({
                             </Link>
                         </Button>
                         <Button
-                            asChild
                             variant="outline"
-                            disabled={form.status !== 'published'}
+                            onClick={preview}
+                            disabled={activeAction !== null}
                         >
-                            <a
-                                href={form.public_url}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                <ExternalLink /> Preview
-                            </a>
+                            {activeAction === 'preview' ? (
+                                <LoaderCircle className="animate-spin" />
+                            ) : (
+                                <ExternalLink />
+                            )}
+                            {activeAction === 'preview'
+                                ? 'Preparing...'
+                                : 'Preview'}
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() =>
-                                router.patch(`/forms/${form.uuid}/publish`)
-                            }
+                            onClick={publish}
+                            disabled={activeAction !== null}
                         >
-                            {form.status === 'published'
-                                ? 'Unpublish'
-                                : 'Publish'}
+                            {activeAction === 'publish' && (
+                                <LoaderCircle className="animate-spin" />
+                            )}
+                            {activeAction === 'publish'
+                                ? form.status === 'published'
+                                    ? 'Unpublishing...'
+                                    : 'Publishing...'
+                                : form.status === 'published'
+                                  ? 'Unpublish'
+                                  : 'Publish'}
                         </Button>
-                        <Button onClick={save}>
-                            <Save /> Save
+                        <Button onClick={save} disabled={activeAction !== null}>
+                            {activeAction === 'save' ? (
+                                <LoaderCircle className="animate-spin" />
+                            ) : (
+                                <Save />
+                            )}
+                            {activeAction === 'save' ? 'Saving...' : 'Save'}
                         </Button>
                     </div>
                 </header>

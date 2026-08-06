@@ -3,6 +3,7 @@ import {
     Check,
     ChevronLeft,
     ChevronRight,
+    Eye,
     LoaderCircle,
     Sparkles,
     Star,
@@ -18,11 +19,16 @@ type Props = {
         schema: FormSchema;
     };
     submitted: boolean;
+    preview?: boolean;
 };
 
 type Answer = string | number | boolean | File | null;
 
-export default function PublicForm({ form, submitted }: Props) {
+export default function PublicForm({
+    form,
+    submitted,
+    preview = false,
+}: Props) {
     const [step, setStep] = useState(0);
     const defaults = useMemo(
         () =>
@@ -59,6 +65,10 @@ export default function PublicForm({ form, submitted }: Props) {
             return;
         }
 
+        if (preview) {
+            return;
+        }
+
         post(`/f/${form.slug}`, { forceFormData: true, preserveScroll: true });
     }
 
@@ -84,6 +94,18 @@ export default function PublicForm({ form, submitted }: Props) {
         <>
             <Head title={form.title} />
             <PublicShell title={form.title}>
+                {preview && (
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
+                        <Eye className="mt-0.5 size-5 shrink-0" />
+                        <div>
+                            <p className="font-semibold">Preview mode</p>
+                            <p className="mt-0.5 text-violet-700">
+                                This preview includes your current unsaved
+                                changes. Responses cannot be submitted here.
+                            </p>
+                        </div>
+                    </div>
+                )}
                 <div className="mb-8">
                     <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-violet-700 uppercase">
                         <span>
@@ -167,11 +189,15 @@ export default function PublicForm({ form, submitted }: Props) {
                         </button>
                         <button
                             type="submit"
-                            disabled={processing}
+                            disabled={processing || (preview && lastStep)}
                             className="inline-flex min-w-32 items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
                         >
                             {processing ? (
                                 <LoaderCircle className="animate-spin" />
+                            ) : preview && lastStep ? (
+                                <>
+                                    <Eye /> Preview only
+                                </>
                             ) : lastStep ? (
                                 form.schema.settings.submitLabel
                             ) : (

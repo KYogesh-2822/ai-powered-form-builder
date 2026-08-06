@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class AiFormController extends Controller
 {
@@ -32,9 +33,11 @@ class AiFormController extends Controller
 
         GenerateFormWithAi::dispatch($automation->id);
 
-        return back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'AI request queued. The builder will update when it is ready.',
         ]);
+
+        return back();
     }
 }

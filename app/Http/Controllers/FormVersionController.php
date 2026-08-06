@@ -8,6 +8,7 @@ use App\Services\FormVersionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class FormVersionController extends Controller
 {
@@ -22,9 +23,11 @@ class FormVersionController extends Controller
 
         $versions->restore($form, $version, $request->user()->id);
 
-        return back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => "Version {$version->version} restored as a new version.",
         ]);
+
+        return back();
     }
 }
