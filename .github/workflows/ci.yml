@@ -52,6 +52,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Generate frontend route types
+        run: php artisan wayfinder:generate --with-form
+
       - name: PHP formatting
         run: composer lint:check
 
