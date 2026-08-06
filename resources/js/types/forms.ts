@@ -67,6 +67,16 @@ export type FormSummary = {
     updated_at: string;
 };
 
+export type PublicFormSummary = {
+    title: string;
+    slug: string;
+    description: string | null;
+    public_url: string;
+    sections_count: number;
+    fields_count: number;
+    published_at: string | null;
+};
+
 export type PaginationLink = {
     url: string | null;
     label: string;

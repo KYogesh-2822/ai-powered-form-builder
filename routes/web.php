@@ -8,9 +8,10 @@ use App\Http\Controllers\FormImportController;
 use App\Http\Controllers\FormSubmissionController;
 use App\Http\Controllers\FormVersionController;
 use App\Http\Controllers\PublicFormController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', WelcomeController::class)->name('home');
 
 Route::get('f/{slug}', [PublicFormController::class, 'show'])->name('public.forms.show');
 Route::post('f/{slug}', [PublicFormController::class, 'submit'])

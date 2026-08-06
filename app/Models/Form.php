@@ -16,10 +16,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $uuid
  * @property string $title
  * @property string $slug
+ * @property string|null $description
  * @property string $status
  * @property array<string, mixed> $schema
  * @property array<string, mixed>|null $settings
  * @property int $version
+ * @property \Illuminate\Support\Carbon|null $published_at
  */
 #[Fillable([
     'user_id',

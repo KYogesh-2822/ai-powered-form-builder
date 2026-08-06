@@ -11,7 +11,7 @@ FormForge is a production-oriented form builder built with Laravel 13, React 19,
 - 13 field types with click-to-add, drag-and-drop ordering, inline edits, duplication, deletion, sections, and multi-step public forms.
 - Per-field keys, defaults, placeholders, help text, required state, choice options, numeric/length/regex/file validation, and conditional display rules.
 - One canonical JSON schema shared by the canvas, raw editor, public renderer, server validation, AI output contract, and import mapping.
-- Public URLs, schema-derived server validation, private import storage, public upload storage, searchable paginated responses, and streaming CSV export.
+- A searchable public gallery for published forms, public fill URLs, schema-derived server validation, private import storage, public upload storage, searchable paginated responses, and streaming CSV export.
 - Queued OpenAI generation and edits with visible status, strict Structured Outputs, repair retries, model/token/latency audit data, and no API key exposure.
 - Queued DOCX/XLSX parsing with an editable mapping preview and committed sample documents.
 - Immutable form versions and rollback, Redis-cached public form payloads, cache invalidation, request throttling, honeypot/timing checks, and idempotent submissions.
@@ -127,6 +127,7 @@ The migrations are authoritative. [database/schema/mysql-schema.sql](database/sc
 
 | Method | Route | Purpose |
 |---|---|---|
+| `GET` | `/` | Product landing page and searchable published-form gallery |
 | `GET/POST` | `/f/{slug}` | Public render and submission |
 | `GET/POST/PUT/DELETE` | `/forms...` | Authenticated form management |
 | `PATCH` | `/forms/{form}/publish` | Publish or return to draft |
